@@ -3,419 +3,572 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cat Printer</title>
+<title>Printer</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
 
-  :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --border: #2a2a2a;
-    --accent: #e8ff5a;
-    --text: #e8e8e8;
-    --muted: #666;
-    --error: #ff5a5a;
-    --success: #5affb0;
-  }
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --border: #dddbd5;
+  --ink: #1a1917;
+  --muted: #888580;
+  --accent: #1a1917;
+  --green: #2d7a4f;
+  --red: #b93030;
+  --yellow: #c97b00;
+  --paper: #faf9f6;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-  }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  padding: 32px 16px 64px;
+}
 
-  header {
-    width: 100%;
-    max-width: 560px;
-    margin-bottom: 40px;
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-  }
+.wrap { max-width: 600px; margin: 0 auto; }
 
-  header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--accent);
-  }
+/* Header */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--ink);
+}
+.hdr-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.hdr-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
-  header span {
-    font-size: 0.75rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
+/* Pill badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+.badge.ok  { border-color: var(--green); color: var(--green); }
+.badge.err { border-color: var(--red);   color: var(--red);   }
+.badge.scanning { border-color: var(--yellow); color: var(--yellow); }
 
-  .card {
-    width: 100%;
-    max-width: 560px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 16px;
-  }
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.dot.pulse { animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-  .card-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
+/* Section */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
 
-  .ip-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+/* Device list */
+.device-list { display: flex; flex-direction: column; gap: 8px; }
+.device-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.device-item:hover { border-color: var(--ink); background: #fff; }
+.device-item.selected { border-color: var(--ink); background: var(--ink); color: #fff; }
+.device-item.selected .dev-sub { color: #aaa; }
 
-  input[type="text"] {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
+.dev-main { font-weight: 600; font-size: 0.9rem; }
+.dev-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.dev-right { text-align: right; }
+.dev-ip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+}
+.dev-rssi { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
 
-  input[type="text"]:focus { border-color: var(--accent); }
+.scan-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.scan-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
 
-  button {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
-    white-space: nowrap;
-  }
+/* Buttons */
+button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+button:hover { opacity: 0.8; }
+button:active { opacity: 0.6; }
+button:disabled { opacity: 0.3; cursor: not-allowed; }
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+button.sm { padding: 6px 12px; font-size: 0.72rem; }
 
-  button:hover { opacity: 0.85; }
-  button:active { transform: scale(0.97); }
-  button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+/* Manual IP fallback */
+.manual-row {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+input[type="text"] {
+  flex: 1;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus { border-color: var(--ink); }
 
-  button.ghost {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
+/* Dropzone */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dropzone:hover, .dropzone.over { border-color: var(--ink); background: var(--paper); }
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.dropzone-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.dropzone p { font-size: 0.82rem; color: var(--muted); }
+.dropzone strong { color: var(--ink); }
 
-  .status-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    margin-right: 8px;
-    transition: background 0.3s;
-  }
-  .status-dot.ok  { background: var(--success); box-shadow: 0 0 8px var(--success); }
-  .status-dot.err { background: var(--error);   box-shadow: 0 0 8px var(--error); }
-  .status-dot.pulse {
-    background: var(--accent);
-    animation: pulse 1s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* Page thumbs */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.page-thumb {
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s;
+  background: #fff;
+}
+.page-thumb canvas { display: block; width: 100%; }
+.page-thumb .pnum {
+  position: absolute; bottom: 4px; right: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  background: rgba(255,255,255,0.8);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.page-thumb:hover { border-color: var(--muted); }
+.page-thumb.sel { border-color: var(--ink); }
+.page-thumb.sel::after {
+  content: '✓';
+  position: absolute; top: 4px; right: 5px;
+  font-size: 0.65rem;
+  background: var(--ink);
+  color: #fff;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 16px;
+  text-align: center;
+}
 
-  #status-text { font-size: 0.85rem; color: var(--muted); }
+/* Darkness */
+.slider-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+input[type="range"] { flex: 1; accent-color: var(--ink); }
+.slider-labels { display: flex; justify-content: space-between; }
+.slider-labels span { font-size: 0.65rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
 
-  /* Drop zone */
-  .dropzone {
-    border: 2px dashed var(--border);
-    border-radius: 10px;
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    position: relative;
-  }
-  .dropzone:hover, .dropzone.drag-over {
-    border-color: var(--accent);
-    background: rgba(232,255,90,0.03);
-  }
-  .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .dropzone .icon { font-size: 2rem; margin-bottom: 8px; }
-  .dropzone p { font-size: 0.85rem; color: var(--muted); }
-  .dropzone strong { color: var(--text); }
+/* Big print button */
+#print-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
 
-  /* Preview */
-  #preview-section { display: none; }
+/* Log */
+#log {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.9;
+  color: var(--muted);
+  max-height: 120px;
+  overflow-y: auto;
+}
+#log .ok   { color: var(--green); }
+#log .err  { color: var(--red); }
+#log .info { color: var(--yellow); }
 
-  .page-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .page-thumb {
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    cursor: pointer;
-    position: relative;
-    transition: border-color 0.2s;
-  }
-  .page-thumb:hover { border-color: var(--muted); }
-  .page-thumb.selected { border-color: var(--accent); }
-  .page-thumb canvas { display: block; width: 100%; }
-  .page-thumb .pg-num {
-    position: absolute; bottom: 4px; right: 6px;
-    font-size: 0.65rem; color: var(--muted);
-  }
-
-  /* Darkness slider */
-  .slider-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
-  }
-  input[type="range"] {
-    flex: 1;
-    accent-color: var(--accent);
-  }
-  .slider-val { min-width: 28px; text-align: right; font-size: 0.85rem; }
-
-  /* Print button */
-  #print-btn {
-    width: 100%;
-    padding: 14px;
-    font-size: 1rem;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    border-radius: 10px;
-    margin-top: 4px;
-  }
-
-  /* Log */
-  #log {
-    font-size: 0.75rem;
-    color: var(--muted);
-    line-height: 1.8;
-    max-height: 100px;
-    overflow-y: auto;
-  }
-  #log .ok  { color: var(--success); }
-  #log .err { color: var(--error); }
-  #log .info { color: var(--accent); }
+details summary {
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 12px;
+  user-select: none;
+}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<header>
-  <h1>🐱 Cat Printer</h1>
-  <span>ESP32 Bridge</span>
-</header>
-
-<!-- Step 1: Connect to ESP32 -->
-<div class="card">
-  <div class="card-label">01 — ESP32 IP Address</div>
-  <div class="ip-row">
-    <input type="text" id="ip-input" placeholder="192.168.x.x" value="">
-    <button onclick="connect()">Connect</button>
-  </div>
-  <div style="margin-top:14px; display:flex; align-items:center; gap:8px;">
-    <span class="status-dot" id="dot"></span>
-    <span id="status-text">Not connected</span>
-  </div>
-</div>
-
-<!-- Step 2: Upload PDF -->
-<div class="card" id="preview-section" style="display:none">
-  <div class="card-label">02 — Select Pages to Print</div>
-  <div class="page-grid" id="page-grid"></div>
-
-  <div style="margin-top:16px;">
-    <div class="card-label">Darkness</div>
-    <div class="slider-row">
-      <span style="font-size:0.8rem; color:var(--muted)">light</span>
-      <input type="range" id="darkness" min="30" max="100" value="70">
-      <span style="font-size:0.8rem; color:var(--muted)">dark</span>
-      <span class="slider-val" id="darkness-val">70</span>
+  <!-- Header -->
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">🖨 Printer</div>
+      <div class="hdr-sub">ESP32 Bridge</div>
+    </div>
+    <div id="conn-badge" class="badge">
+      <span class="dot"></span>
+      <span id="badge-text">Not connected</span>
     </div>
   </div>
 
-  <div style="margin-top:16px;">
-    <button id="print-btn" disabled onclick="printSelected()">Print Selected Pages</button>
-  </div>
-</div>
+  <!-- Step 1: Discover -->
+  <div class="section" id="discover-section">
+    <div class="section-label">01 — Find ESP32 on network</div>
+    <div class="device-list" id="device-list">
+      <div style="font-size:0.82rem; color:var(--muted); padding: 8px 0;">Press scan to search your local network for ESP32 devices.</div>
+    </div>
+    <div class="scan-footer">
+      <span class="scan-note" id="scan-note">—</span>
+      <button class="ghost sm" onclick="startScan()">⟳ Scan</button>
+    </div>
 
-<!-- Drop zone (always visible after connect) -->
-<div class="card" id="upload-card" style="display:none">
-  <div class="card-label">03 — Upload PDF</div>
-  <div class="dropzone" id="dropzone">
-    <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg">
-    <div class="icon">📄</div>
-    <p><strong>Drop PDF or image here</strong></p>
-    <p>or click to browse</p>
+    <!-- Manual fallback -->
+    <details>
+      <summary>Enter IP manually</summary>
+      <div class="manual-row" style="margin-top:10px;">
+        <input type="text" id="manual-ip" placeholder="192.168.x.x">
+        <button class="sm" onclick="connectManual()">Connect</button>
+      </div>
+    </details>
   </div>
-</div>
 
-<!-- Log -->
-<div class="card">
-  <div class="card-label">Log</div>
-  <div id="log">Waiting...</div>
+  <!-- Step 2: Upload -->
+  <div class="section" id="upload-section" style="display:none">
+    <div class="section-label">02 — Upload PDF or image</div>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg,image/jpg">
+      <div class="dropzone-icon">📄</div>
+      <p><strong>Drop file here</strong></p>
+      <p>PDF, PNG or JPG</p>
+    </div>
+  </div>
+
+  <!-- Step 3: Select pages + print -->
+  <div class="section" id="print-section" style="display:none">
+    <div class="section-label">03 — Select pages &amp; print</div>
+    <div class="page-grid" id="page-grid"></div>
+
+    <div style="margin-top:16px;">
+      <div class="section-label" style="margin-bottom:6px;">Darkness</div>
+      <div class="slider-row">
+        <input type="range" id="darkness" min="30" max="100" value="70">
+        <span id="darkness-val" style="font-family:'IBM Plex Mono',monospace; font-size:0.8rem; min-width:28px; text-align:right;">70</span>
+      </div>
+      <div class="slider-labels"><span>light</span><span>dark</span></div>
+    </div>
+
+    <button id="print-btn" disabled onclick="printSelected()" style="margin-top:16px;">
+      Print selected pages
+    </button>
+  </div>
+
+  <!-- Log -->
+  <div class="section">
+    <div class="section-label">Log</div>
+    <div id="log"><span class="info">Ready.</span></div>
+  </div>
+
 </div>
 
 <script>
-// ── PDF.js setup ──────────────────────────────────────────────
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // ── State ─────────────────────────────────────────────────────
-let espIP       = '';
-let connected   = false;
-let pages       = [];      // { canvas, selected }
-let pollTimer   = null;
+let espURL     = '';
+let connected  = false;
+let pages      = [];
+let pollTimer  = null;
 
 // ── Log ───────────────────────────────────────────────────────
-function log(msg, type='') {
+function log(msg, cls='') {
   const el = document.getElementById('log');
-  const line = document.createElement('div');
-  if (type) line.className = type;
-  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  el.appendChild(line);
+  const d  = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + '  ' + msg;
+  el.appendChild(d);
   el.scrollTop = el.scrollHeight;
-  if (el.children.length > 40) el.removeChild(el.firstChild);
+  while (el.children.length > 60) el.removeChild(el.firstChild);
 }
 
-// ── Status dot ────────────────────────────────────────────────
-function setDot(state, text) {
-  const dot = document.getElementById('dot');
-  dot.className = 'status-dot ' + state;
-  document.getElementById('status-text').textContent = text;
+// ── Badge ─────────────────────────────────────────────────────
+function setBadge(state, text) {
+  const b = document.getElementById('conn-badge');
+  const d = b.querySelector('.dot');
+  b.className = 'badge ' + state;
+  d.className = 'dot' + (state === 'scanning' ? ' pulse' : '');
+  document.getElementById('badge-text').textContent = text;
 }
 
-// ── Connect to ESP32 ──────────────────────────────────────────
-async function connect() {
-  espIP = document.getElementById('ip-input').value.trim();
-  if (!espIP) { log('Enter an IP address', 'err'); return; }
-  if (!espIP.startsWith('http')) espIP = 'http://' + espIP;
+// ── Network scan ──────────────────────────────────────────────
+// Strategy: probe the most common home subnet ranges .1 – .254
+// on port 80 hitting /status. We check for {"device":"ESP32-PrintBridge"}
+// to confirm it's our board, then show name + IP.
 
-  setDot('pulse', 'Connecting...');
-  log('Connecting to ' + espIP);
+let scanAbort = null;
+
+async function startScan() {
+  if (scanAbort) scanAbort.abort();
+  scanAbort = new AbortController();
+  const signal = scanAbort.signal;
+
+  const list = document.getElementById('device-list');
+  list.innerHTML = '';
+  document.getElementById('scan-note').textContent = 'Scanning…';
+  setBadge('scanning', 'Scanning');
+  log('Scanning network for ESP32 devices…', 'info');
+
+  // Determine likely subnet from current page URL or default to 192.168.1
+  // We'll try 192.168.0.x, 192.168.1.x, 192.168.2.x, 10.0.0.x
+  const subnets = ['192.168.0', '192.168.1', '192.168.2', '10.0.0', '10.0.1'];
+  const found   = [];
+  let   probed  = 0;
+  let   total   = subnets.length * 254;
+
+  const probe = async (ip) => {
+    if (signal.aborted) return;
+    try {
+      const r = await fetch(`http://${ip}/status`, {
+        signal: AbortSignal.any
+          ? AbortSignal.any([signal, AbortSignal.timeout(800)])
+          : signal,
+      });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.device === 'ESP32-PrintBridge') {
+        addDeviceToList(j, ip);
+        found.push(ip);
+        log(`Found: ${j.board} at ${ip} (printer: ${j.printer})`, 'ok');
+      }
+    } catch { /* unreachable host */ }
+    probed++;
+    document.getElementById('scan-note').textContent =
+      `Probed ${probed}/${total}${found.length ? ' · ' + found.length + ' found' : ''}`;
+  };
+
+  // Fan out — 30 concurrent probes at a time
+  for (const subnet of subnets) {
+    if (signal.aborted) break;
+    const ips = Array.from({length:254}, (_,i) => `${subnet}.${i+1}`);
+    for (let i = 0; i < ips.length; i += 30) {
+      if (signal.aborted) break;
+      await Promise.all(ips.slice(i, i+30).map(probe));
+    }
+  }
+
+  if (!signal.aborted) {
+    const note = found.length
+      ? `Done — ${found.length} device${found.length>1?'s':''} found`
+      : 'No ESP32 found. Try manual IP below.';
+    document.getElementById('scan-note').textContent = note;
+    if (!connected) setBadge('', 'Not connected');
+    log(note, found.length ? 'ok' : 'err');
+    if (!found.length && !list.children.length) {
+      list.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);padding:8px 0">No devices found. Enter IP manually below.</div>';
+    }
+  }
+}
+
+function addDeviceToList(info, ip) {
+  const item = document.createElement('div');
+  item.className = 'device-item';
+  item.innerHTML = `
+    <div>
+      <div class="dev-main">${info.board || 'ESP32'}</div>
+      <div class="dev-sub">printer: ${info.printerName || '?'} · ${info.printer}</div>
+    </div>
+    <div class="dev-right">
+      <div class="dev-ip">${ip}</div>
+      <div class="dev-rssi">WiFi ${info.rssi} dBm</div>
+    </div>`;
+  item.addEventListener('click', () => connectTo(ip, item));
+  document.getElementById('device-list').appendChild(item);
+}
+
+// ── Connect ───────────────────────────────────────────────────
+async function connectTo(ip, itemEl) {
+  document.querySelectorAll('.device-item').forEach(e => e.classList.remove('selected'));
+  if (itemEl) itemEl.classList.add('selected');
+  espURL = 'http://' + ip;
+  setBadge('scanning', 'Connecting…');
   try {
-    const r = await fetch(espIP + '/status', { signal: AbortSignal.timeout(4000) });
+    const r = await fetch(espURL + '/status', { signal: AbortSignal.timeout(4000) });
     const j = await r.json();
     connected = true;
-    setDot('ok', `Printer: ${j.printer}`);
-    log(`ESP32 online — printer: ${j.printer}`, 'ok');
-    document.getElementById('upload-card').style.display = 'block';
+    setBadge('ok', `${j.board} · printer ${j.printer}`);
+    log(`Connected to ${j.board} at ${ip}`, 'ok');
+    document.getElementById('upload-section').style.display = 'block';
     startPolling();
+    if (j.printer === 'disconnected') log('Printer BLE not connected yet — check it is on', 'info');
+    localStorage.setItem('esp32ip', ip);
   } catch(e) {
-    setDot('err', 'Connection failed');
-    log('Failed: ' + e.message, 'err');
+    setBadge('err', 'Connection failed');
+    log('Connect failed: ' + e.message, 'err');
   }
+}
+
+async function connectManual() {
+  const val = document.getElementById('manual-ip').value.trim();
+  if (!val) return;
+  await connectTo(val, null);
 }
 
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r = await fetch(espIP + '/status', { signal: AbortSignal.timeout(3000) });
+      const r = await fetch(espURL+'/status',{signal:AbortSignal.timeout(3000)});
       const j = await r.json();
-      setDot('ok', `Printer: ${j.printer}`);
-    } catch {
-      setDot('err', 'ESP32 unreachable');
-    }
-  }, 5000);
+      setBadge('ok', `${j.board} · printer ${j.printer}`);
+    } catch { setBadge('err', 'ESP32 unreachable'); }
+  }, 6000);
 }
 
 // ── File input ────────────────────────────────────────────────
 const fileInput = document.getElementById('file-input');
 const dropzone  = document.getElementById('dropzone');
 
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
+dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
 dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropzone.classList.remove('drag-over');
+  e.preventDefault(); dropzone.classList.remove('over');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
 async function handleFile(file) {
-  if (!file) return;
-  log(`Loading: ${file.name}`);
+  log('Loading ' + file.name);
   pages = [];
   document.getElementById('page-grid').innerHTML = '';
-  document.getElementById('preview-section').style.display = 'block';
-
-  const arrayBuffer = await file.arrayBuffer();
-
-  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-    await loadPDF(arrayBuffer);
-  } else {
-    await loadImage(arrayBuffer, file.type);
-  }
+  document.getElementById('print-section').style.display = 'block';
+  const buf = await file.arrayBuffer();
+  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) await loadPDF(buf);
+  else await loadImage(buf, file.type);
   updatePrintBtn();
 }
 
-async function loadPDF(buffer) {
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-  log(`PDF loaded — ${pdf.numPages} pages`);
+async function loadPDF(buf) {
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  log(`PDF: ${pdf.numPages} page(s)`);
   for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    // Render at width 384px (printer width)
-    const viewport = page.getViewport({ scale: 384 / page.getViewport({ scale: 1 }).width });
-    const canvas = document.createElement('canvas');
-    canvas.width  = 384;
-    canvas.height = Math.round(viewport.height);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    addPage(canvas, i);
+    const pg = await pdf.getPage(i);
+    const vp = pg.getViewport({scale: 384 / pg.getViewport({scale:1}).width});
+    const cv = document.createElement('canvas');
+    cv.width = 384; cv.height = Math.round(vp.height);
+    await pg.render({canvasContext: cv.getContext('2d'), viewport: vp}).promise;
+    addPageThumb(cv, i);
   }
 }
 
-async function loadImage(buffer, mimeType) {
-  const blob = new Blob([buffer], { type: mimeType });
-  const url  = URL.createObjectURL(blob);
-  const img  = new Image();
+async function loadImage(buf, mime) {
+  const url = URL.createObjectURL(new Blob([buf],{type:mime}));
+  const img = new Image();
   await new Promise(res => { img.onload = res; img.src = url; });
-  const canvas = document.createElement('canvas');
-  canvas.width  = 384;
-  canvas.height = Math.round(img.height * 384 / img.width);
-  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  const cv = document.createElement('canvas');
+  cv.width = 384; cv.height = Math.round(img.height * 384 / img.width);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
   URL.revokeObjectURL(url);
-  addPage(canvas, 1);
+  addPageThumb(cv, 1);
+  log('Image loaded');
 }
 
-function addPage(canvas, num) {
-  const thumb = document.createElement('div');
-  thumb.className = 'page-thumb selected';
-  thumb.innerHTML = `<span class="pg-num">p${num}</span>`;
-  thumb.prepend(canvas.cloneNode(true)); // thumbnail copy
-  thumb.addEventListener('click', () => {
-    thumb.classList.toggle('selected');
-    updatePrintBtn();
-  });
-  document.getElementById('page-grid').appendChild(thumb);
-  pages.push({ canvas, selected: true, thumb });
+function addPageThumb(canvas, num) {
+  const t = document.createElement('div');
+  t.className = 'page-thumb sel';
+  const c = canvas.cloneNode(true);
+  t.appendChild(c);
+  t.innerHTML += `<span class="pnum">p${num}</span>`;
+  t.addEventListener('click', () => { t.classList.toggle('sel'); updatePrintBtn(); });
+  document.getElementById('page-grid').appendChild(t);
+  pages.push({ canvas });
 }
 
 function updatePrintBtn() {
-  const anySelected = pages.some((_, i) =>
-    document.getElementById('page-grid').children[i]?.classList.contains('selected'));
-  document.getElementById('print-btn').disabled = !anySelected || !connected;
+  const any = [...document.getElementById('page-grid').children].some(e => e.classList.contains('sel'));
+  document.getElementById('print-btn').disabled = !any || !connected;
 }
 
 // ── Darkness slider ───────────────────────────────────────────
@@ -423,41 +576,29 @@ document.getElementById('darkness').addEventListener('input', e => {
   document.getElementById('darkness-val').textContent = e.target.value;
 });
 
-// ── Convert canvas to 1bpp byte array (Floyd-Steinberg dither) ─
-function canvasTo1bpp(canvas) {
-  const ctx   = canvas.getContext('2d');
-  const idata = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data  = idata.data;
-  const w     = canvas.width;   // should be 384
-  const h     = canvas.height;
-
-  // Convert to greyscale float array
-  const grey = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    grey[i] = (data[i*4]*0.299 + data[i*4+1]*0.587 + data[i*4+2]*0.114);
-  }
-
-  // Floyd-Steinberg dithering
-  const out = new Uint8Array(Math.ceil(w / 8) * h);
+// ── 1bpp conversion (Floyd-Steinberg) ─────────────────────────
+function to1bpp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const id  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d   = id.data, w = canvas.width, h = canvas.height;
+  const g   = new Float32Array(w * h);
+  for (let i = 0; i < w*h; i++) g[i] = d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114;
+  const out = new Uint8Array(Math.ceil(w/8) * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const idx   = y * w + x;
-      const old   = grey[idx];
-      const newv  = old < 128 ? 0 : 255;
-      const err   = old - newv;
-      grey[idx]   = newv;
-
-      if (x + 1 < w)           grey[idx + 1]     += err * 7/16;
-      if (y + 1 < h) {
-        if (x > 0)              grey[idx + w - 1] += err * 3/16;
-                                grey[idx + w]     += err * 5/16;
-        if (x + 1 < w)         grey[idx + w + 1] += err * 1/16;
+      const idx  = y*w+x;
+      const old  = g[idx];
+      const nv   = old < 128 ? 0 : 255;
+      const err  = old - nv;
+      g[idx] = nv;
+      if (x+1 < w)           g[idx+1]   += err*7/16;
+      if (y+1 < h) {
+        if (x>0)             g[idx+w-1] += err*3/16;
+                             g[idx+w]   += err*5/16;
+        if (x+1 < w)        g[idx+w+1] += err*1/16;
       }
-
-      // Set bit (1 = white/blank, 0 = black/printed — thermal printer convention)
-      const byteIdx = y * (w / 8) + Math.floor(x / 8);
-      const bitPos  = 7 - (x % 8);
-      if (newv === 0) out[byteIdx] |= (1 << bitPos); // black pixel = print
+      const bi = y*(w/8) + Math.floor(x/8);
+      if (nv === 0) out[bi] |= (1 << (7 - x%8));
     }
   }
   return { bytes: out, lines: h };
@@ -468,54 +609,43 @@ async function printSelected() {
   if (!connected) return;
   const btn = document.getElementById('print-btn');
   btn.disabled = true;
-  btn.textContent = 'Printing...';
-
+  btn.textContent = 'Printing…';
   const darkness = parseInt(document.getElementById('darkness').value);
   const grid     = document.getElementById('page-grid');
-  const selected = pages.filter((_, i) => grid.children[i]?.classList.contains('selected'));
+  const sel      = pages.filter((_,i) => grid.children[i]?.classList.contains('sel'));
+  log(`Sending ${sel.length} page(s), darkness ${darkness}`, 'info');
 
-  log(`Sending ${selected.length} page(s) at darkness ${darkness}...`, 'info');
-
-  for (let i = 0; i < selected.length; i++) {
-    const { canvas } = selected[i];
-    log(`Converting page ${i+1}...`);
-    const { bytes, lines } = canvasTo1bpp(canvas);
-    const byteArray = Array.from(bytes);
-
-    const body = JSON.stringify({ lines, darkness, data: byteArray });
-
+  for (let i = 0; i < sel.length; i++) {
+    log(`Converting page ${i+1}…`);
+    const { bytes, lines } = to1bpp(sel[i].canvas);
     try {
-      log(`Sending page ${i+1} (${lines} lines, ${byteArray.length} bytes)...`);
-      const r = await fetch(espIP + '/print', {
+      log(`Sending page ${i+1} — ${lines} lines, ${bytes.length} bytes`);
+      const r = await fetch(espURL + '/print', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ lines, darkness, data: Array.from(bytes) }),
         signal: AbortSignal.timeout(60000)
       });
       const j = await r.json();
-      if (j.status === 'printed') {
-        log(`Page ${i+1} printed ✓`, 'ok');
-      } else {
-        log(`Page ${i+1} error: ${j.error}`, 'err');
-      }
+      j.status === 'printed'
+        ? log(`Page ${i+1} printed ✓`, 'ok')
+        : log(`Page ${i+1} error: ${j.error}`, 'err');
     } catch(e) {
       log(`Page ${i+1} failed: ${e.message}`, 'err');
     }
-
-    // Small gap between pages
-    if (i < selected.length - 1) await new Promise(r => setTimeout(r, 1500));
+    if (i < sel.length-1) await new Promise(r => setTimeout(r, 1500));
   }
 
-  btn.textContent = 'Print Selected Pages';
+  btn.textContent = 'Print selected pages';
   updatePrintBtn();
 }
 
-// ── Restore saved IP ──────────────────────────────────────────
-const savedIP = localStorage.getItem('esp32ip');
-if (savedIP) document.getElementById('ip-input').value = savedIP;
-document.getElementById('ip-input').addEventListener('change', e => {
-  localStorage.setItem('esp32ip', e.target.value);
-});
+// ── Restore last IP ───────────────────────────────────────────
+const saved = localStorage.getItem('esp32ip');
+if (saved) {
+  document.getElementById('manual-ip').value = saved;
+  log('Last IP: ' + saved + ' — press Scan or enter manually', 'info');
+}
 </script>
 </body>
 </html>

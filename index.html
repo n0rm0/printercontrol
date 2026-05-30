@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat Printer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #e8ff5a;
+    --text: #e8e8e8;
+    --muted: #666;
+    --error: #ff5a5a;
+    --success: #5affb0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  header {
+    width: 100%;
+    max-width: 560px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 560px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .ip-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-right: 8px;
+    transition: background 0.3s;
+  }
+  .status-dot.ok  { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.err { background: var(--error);   box-shadow: 0 0 8px var(--error); }
+  .status-dot.pulse {
+    background: var(--accent);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  #status-text { font-size: 0.85rem; color: var(--muted); }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,255,90,0.03);
+  }
+  .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dropzone .icon { font-size: 2rem; margin-bottom: 8px; }
+  .dropzone p { font-size: 0.85rem; color: var(--muted); }
+  .dropzone strong { color: var(--text); }
+
+  /* Preview */
+  #preview-section { display: none; }
+
+  .page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .page-thumb {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .page-thumb:hover { border-color: var(--muted); }
+  .page-thumb.selected { border-color: var(--accent); }
+  .page-thumb canvas { display: block; width: 100%; }
+  .page-thumb .pg-num {
+    position: absolute; bottom: 4px; right: 6px;
+    font-size: 0.65rem; color: var(--muted);
+  }
+
+  /* Darkness slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .slider-val { min-width: 28px; text-align: right; font-size: 0.85rem; }
+
+  /* Print button */
+  #print-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+
+  /* Log */
+  #log {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.8;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+  #log .ok  { color: var(--success); }
+  #log .err { color: var(--error); }
+  #log .info { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐱 Cat Printer</h1>
+  <span>ESP32 Bridge</span>
+</header>
+
+<!-- Step 1: Connect to ESP32 -->
+<div class="card">
+  <div class="card-label">01 — ESP32 IP Address</div>
+  <div class="ip-row">
+    <input type="text" id="ip-input" placeholder="192.168.x.x" value="">
+    <button onclick="connect()">Connect</button>
+  </div>
+  <div style="margin-top:14px; display:flex; align-items:center; gap:8px;">
+    <span class="status-dot" id="dot"></span>
+    <span id="status-text">Not connected</span>
+  </div>
+</div>
+
+<!-- Step 2: Upload PDF -->
+<div class="card" id="preview-section" style="display:none">
+  <div class="card-label">02 — Select Pages to Print</div>
+  <div class="page-grid" id="page-grid"></div>
+
+  <div style="margin-top:16px;">
+    <div class="card-label">Darkness</div>
+    <div class="slider-row">
+      <span style="font-size:0.8rem; color:var(--muted)">light</span>
+      <input type="range" id="darkness" min="30" max="100" value="70">
+      <span style="font-size:0.8rem; color:var(--muted)">dark</span>
+      <span class="slider-val" id="darkness-val">70</span>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <button id="print-btn" disabled onclick="printSelected()">Print Selected Pages</button>
+  </div>
+</div>
+
+<!-- Drop zone (always visible after connect) -->
+<div class="card" id="upload-card" style="display:none">
+  <div class="card-label">03 — Upload PDF</div>
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg">
+    <div class="icon">📄</div>
+    <p><strong>Drop PDF or image here</strong></p>
+    <p>or click to browse</p>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="card">
+  <div class="card-label">Log</div>
+  <div id="log">Waiting...</div>
+</div>
+
+<script>
+// ── PDF.js setup ──────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ─────────────────────────────────────────────────────
+let espIP       = '';
+let connected   = false;
+let pages       = [];      // { canvas, selected }
+let pollTimer   = null;
+
+// ── Log ───────────────────────────────────────────────────────
+function log(msg, type='') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (type) line.className = type;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 40) el.removeChild(el.firstChild);
+}
+
+// ── Status dot ────────────────────────────────────────────────
+function setDot(state, text) {
+  const dot = document.getElementById('dot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('status-text').textContent = text;
+}
+
+// ── Connect to ESP32 ──────────────────────────────────────────
+async function connect() {
+  espIP = document.getElementById('ip-input').value.trim();
+  if (!espIP) { log('Enter an IP address', 'err'); return; }
+  if (!espIP.startsWith('http')) espIP = 'http://' + espIP;
+
+  setDot('pulse', 'Connecting...');
+  log('Connecting to ' + espIP);
+  try {
+    const r = await fetch(espIP + '/status', { signal: AbortSignal.timeout(4000) });
+    const j = await r.json();
+    connected = true;
+    setDot('ok', `Printer: ${j.printer}`);
+    log(`ESP32 online — printer: ${j.printer}`, 'ok');
+    document.getElementById('upload-card').style.display = 'block';
+    startPolling();
+  } catch(e) {
+    setDot('err', 'Connection failed');
+    log('Failed: ' + e.message, 'err');
+  }
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(espIP + '/status', { signal: AbortSignal.timeout(3000) });
+      const j = await r.json();
+      setDot('ok', `Printer: ${j.printer}`);
+    } catch {
+      setDot('err', 'ESP32 unreachable');
+    }
+  }, 5000);
+}
+
+// ── File input ────────────────────────────────────────────────
+const fileInput = document.getElementById('file-input');
+const dropzone  = document.getElementById('dropzone');
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+async function handleFile(file) {
+  if (!file) return;
+  log(`Loading: ${file.name}`);
+  pages = [];
+  document.getElementById('page-grid').innerHTML = '';
+  document.getElementById('preview-section').style.display = 'block';
+
+  const arrayBuffer = await file.arrayBuffer();
+
+  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    await loadPDF(arrayBuffer);
+  } else {
+    await loadImage(arrayBuffer, file.type);
+  }
+  updatePrintBtn();
+}
+
+async function loadPDF(buffer) {
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  log(`PDF loaded — ${pdf.numPages} pages`);
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    // Render at width 384px (printer width)
+    const viewport = page.getViewport({ scale: 384 / page.getViewport({ scale: 1 }).width });
+    const canvas = document.createElement('canvas');
+    canvas.width  = 384;
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    addPage(canvas, i);
+  }
+}
+
+async function loadImage(buffer, mimeType) {
+  const blob = new Blob([buffer], { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  await new Promise(res => { img.onload = res; img.src = url; });
+  const canvas = document.createElement('canvas');
+  canvas.width  = 384;
+  canvas.height = Math.round(img.height * 384 / img.width);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(url);
+  addPage(canvas, 1);
+}
+
+function addPage(canvas, num) {
+  const thumb = document.createElement('div');
+  thumb.className = 'page-thumb selected';
+  thumb.innerHTML = `<span class="pg-num">p${num}</span>`;
+  thumb.prepend(canvas.cloneNode(true)); // thumbnail copy
+  thumb.addEventListener('click', () => {
+    thumb.classList.toggle('selected');
+    updatePrintBtn();
+  });
+  document.getElementById('page-grid').appendChild(thumb);
+  pages.push({ canvas, selected: true, thumb });
+}
+
+function updatePrintBtn() {
+  const anySelected = pages.some((_, i) =>
+    document.getElementById('page-grid').children[i]?.classList.contains('selected'));
+  document.getElementById('print-btn').disabled = !anySelected || !connected;
+}
+
+// ── Darkness slider ───────────────────────────────────────────
+document.getElementById('darkness').addEventListener('input', e => {
+  document.getElementById('darkness-val').textContent = e.target.value;
+});
+
+// ── Convert canvas to 1bpp byte array (Floyd-Steinberg dither) ─
+function canvasTo1bpp(canvas) {
+  const ctx   = canvas.getContext('2d');
+  const idata = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data  = idata.data;
+  const w     = canvas.width;   // should be 384
+  const h     = canvas.height;
+
+  // Convert to greyscale float array
+  const grey = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    grey[i] = (data[i*4]*0.299 + data[i*4+1]*0.587 + data[i*4+2]*0.114);
+  }
+
+  // Floyd-Steinberg dithering
+  const out = new Uint8Array(Math.ceil(w / 8) * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx   = y * w + x;
+      const old   = grey[idx];
+      const newv  = old < 128 ? 0 : 255;
+      const err   = old - newv;
+      grey[idx]   = newv;
+
+      if (x + 1 < w)           grey[idx + 1]     += err * 7/16;
+      if (y + 1 < h) {
+        if (x > 0)              grey[idx + w - 1] += err * 3/16;
+                                grey[idx + w]     += err * 5/16;
+        if (x + 1 < w)         grey[idx + w + 1] += err * 1/16;
+      }
+
+      // Set bit (1 = white/blank, 0 = black/printed — thermal printer convention)
+      const byteIdx = y * (w / 8) + Math.floor(x / 8);
+      const bitPos  = 7 - (x % 8);
+      if (newv === 0) out[byteIdx] |= (1 << bitPos); // black pixel = print
+    }
+  }
+  return { bytes: out, lines: h };
+}
+
+// ── Print ─────────────────────────────────────────────────────
+async function printSelected() {
+  if (!connected) return;
+  const btn = document.getElementById('print-btn');
+  btn.disabled = true;
+  btn.textContent = 'Printing...';
+
+  const darkness = parseInt(document.getElementById('darkness').value);
+  const grid     = document.getElementById('page-grid');
+  const selected = pages.filter((_, i) => grid.children[i]?.classList.contains('selected'));
+
+  log(`Sending ${selected.length} page(s) at darkness ${darkness}...`, 'info');
+
+  for (let i = 0; i < selected.length; i++) {
+    const { canvas } = selected[i];
+    log(`Converting page ${i+1}...`);
+    const { bytes, lines } = canvasTo1bpp(canvas);
+    const byteArray = Array.from(bytes);
+
+    const body = JSON.stringify({ lines, darkness, data: byteArray });
+
+    try {
+      log(`Sending page ${i+1} (${lines} lines, ${byteArray.length} bytes)...`);
+      const r = await fetch(espIP + '/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: AbortSignal.timeout(60000)
+      });
+      const j = await r.json();
+      if (j.status === 'printed') {
+        log(`Page ${i+1} printed ✓`, 'ok');
+      } else {
+        log(`Page ${i+1} error: ${j.error}`, 'err');
+      }
+    } catch(e) {
+      log(`Page ${i+1} failed: ${e.message}`, 'err');
+    }
+
+    // Small gap between pages
+    if (i < selected.length - 1) await new Promise(r => setTimeout(r, 1500));
+  }
+
+  btn.textContent = 'Print Selected Pages';
+  updatePrintBtn();
+}
+
+// ── Restore saved IP ──────────────────────────────────────────
+const savedIP = localStorage.getItem('esp32ip');
+if (savedIP) document.getElementById('ip-input').value = savedIP;
+document.getElementById('ip-input').addEventListener('change', e => {
+  localStorage.setItem('esp32ip', e.target.value);
+});
+</script>
+</body>
+</html>

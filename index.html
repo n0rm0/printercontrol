@@ -33,7 +33,6 @@ body {
 
 .wrap { max-width: 600px; margin: 0 auto; }
 
-/* Header */
 .hdr {
   display: flex;
   align-items: center;
@@ -56,7 +55,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Pill badge */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -69,8 +67,8 @@ body {
   background: var(--surface);
   color: var(--muted);
 }
-.badge.ok  { border-color: var(--green); color: var(--green); }
-.badge.err { border-color: var(--red);   color: var(--red);   }
+.badge.ok { border-color: var(--green); color: var(--green); }
+.badge.err { border-color: var(--red); color: var(--red); }
 .badge.scanning { border-color: var(--yellow); color: var(--yellow); }
 
 .dot {
@@ -80,7 +78,6 @@ body {
 .dot.pulse { animation: blink 1s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-/* Section */
 .section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -97,7 +94,6 @@ body {
   margin-bottom: 14px;
 }
 
-/* Device list */
 .device-list { display: flex; flex-direction: column; gap: 8px; }
 .device-item {
   display: flex;
@@ -140,7 +136,6 @@ body {
   font-family: 'IBM Plex Mono', monospace;
 }
 
-/* Buttons */
 button {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.8rem;
@@ -163,7 +158,6 @@ button.ghost {
 }
 button.sm { padding: 6px 12px; font-size: 0.72rem; }
 
-/* Manual IP fallback */
 .manual-row {
   display: flex; gap: 8px; margin-top: 12px;
 }
@@ -181,7 +175,6 @@ input[type="text"] {
 }
 input[type="text"]:focus { border-color: var(--ink); }
 
-/* Dropzone */
 .dropzone {
   border: 2px dashed var(--border);
   border-radius: 8px;
@@ -197,7 +190,6 @@ input[type="text"]:focus { border-color: var(--ink); }
 .dropzone p { font-size: 0.82rem; color: var(--muted); }
 .dropzone strong { color: var(--ink); }
 
-/* Page thumbs */
 .page-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -238,13 +230,11 @@ input[type="text"]:focus { border-color: var(--ink); }
   text-align: center;
 }
 
-/* Darkness */
 .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 input[type="range"] { flex: 1; accent-color: var(--ink); }
 .slider-labels { display: flex; justify-content: space-between; }
 .slider-labels span { font-size: 0.65rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
 
-/* Big print button */
 #print-btn {
   width: 100%;
   padding: 14px;
@@ -254,7 +244,6 @@ input[type="range"] { flex: 1; accent-color: var(--ink); }
   letter-spacing: 0.04em;
 }
 
-/* Log */
 #log {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.72rem;
@@ -263,8 +252,8 @@ input[type="range"] { flex: 1; accent-color: var(--ink); }
   max-height: 120px;
   overflow-y: auto;
 }
-#log .ok   { color: var(--green); }
-#log .err  { color: var(--red); }
+#log .ok { color: var(--green); }
+#log .err { color: var(--red); }
 #log .info { color: var(--yellow); }
 
 details summary {
@@ -282,73 +271,60 @@ details summary {
 <body>
 <div class="wrap">
 
-  <!-- Header -->
   <div class="hdr">
     <div>
       <div class="hdr-title">🖨 Printer</div>
       <div class="hdr-sub">ESP32 Bridge</div>
     </div>
-    <div id="conn-badge" class="badge">
+    <div class="badge" id="conn-badge">
       <span class="dot"></span>
       <span id="badge-text">Not connected</span>
     </div>
   </div>
 
-  <!-- Step 1: Discover -->
-  <div class="section" id="discover-section">
+  <div class="section">
     <div class="section-label">01 — Find ESP32 on network</div>
-    <div class="device-list" id="device-list">
-      <div style="font-size:0.82rem; color:var(--muted); padding: 8px 0;">Press scan to search your local network for ESP32 devices.</div>
-    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
+      Press scan to search your local network for ESP32 devices.
+    </p>
+    <div class="device-list" id="device-list"></div>
     <div class="scan-footer">
       <span class="scan-note" id="scan-note">—</span>
-      <button class="ghost sm" onclick="startScan()">⟳ Scan</button>
+      <button class="sm" onclick="startScan()">⟳ Scan</button>
     </div>
-
-    <!-- Manual fallback -->
     <details>
       <summary>Enter IP manually</summary>
-      <div class="manual-row" style="margin-top:10px;">
-        <input type="text" id="manual-ip" placeholder="192.168.x.x">
-        <button class="sm" onclick="connectManual()">Connect</button>
+      <div class="manual-row">
+        <input type="text" id="manual-ip" placeholder="192.168.1.42">
+        <button class="sm ghost" onclick="connectManual()">Connect</button>
       </div>
     </details>
   </div>
 
-  <!-- Step 2: Upload -->
   <div class="section" id="upload-section" style="display:none">
     <div class="section-label">02 — Upload PDF or image</div>
     <div class="dropzone" id="dropzone">
-      <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg,image/jpg">
+      <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,image/*,application/pdf">
       <div class="dropzone-icon">📄</div>
-      <p><strong>Drop file here</strong></p>
-      <p>PDF, PNG or JPG</p>
+      <p>Drop file here<br><strong>PDF, PNG or JPG</strong></p>
     </div>
   </div>
 
-  <!-- Step 3: Select pages + print -->
   <div class="section" id="print-section" style="display:none">
     <div class="section-label">03 — Select pages &amp; print</div>
     <div class="page-grid" id="page-grid"></div>
-
-    <div style="margin-top:16px;">
-      <div class="section-label" style="margin-bottom:6px;">Darkness</div>
-      <div class="slider-row">
-        <input type="range" id="darkness" min="30" max="100" value="70">
-        <span id="darkness-val" style="font-family:'IBM Plex Mono',monospace; font-size:0.8rem; min-width:28px; text-align:right;">70</span>
-      </div>
-      <div class="slider-labels"><span>light</span><span>dark</span></div>
+    <div class="slider-row">
+      <span style="font-size:0.75rem;color:var(--muted)">Darkness</span>
+      <input type="range" id="darkness" min="1" max="100" value="70">
+      <span id="darkness-val" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;width:28px">70</span>
     </div>
-
-    <button id="print-btn" disabled onclick="printSelected()" style="margin-top:16px;">
-      Print selected pages
-    </button>
+    <div class="slider-labels"><span>light</span><span>dark</span></div>
+    <button id="print-btn" onclick="printSelected()" disabled>Print selected pages</button>
   </div>
 
-  <!-- Log -->
   <div class="section">
     <div class="section-label">Log</div>
-    <div id="log"><span class="info">Ready.</span></div>
+    <div id="log"><div>Ready.</div></div>
   </div>
 
 </div>
@@ -357,24 +333,23 @@ details summary {
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── State ─────────────────────────────────────────────────────
-let espURL     = '';
-let connected  = false;
-let pages      = [];
-let pollTimer  = null;
+let espURL = '';
+let connected = false;
+let pages = [];
+let pollTimer = null;
+let scanAbort = null;
+const foundIds = new Set();
 
-// ── Log ───────────────────────────────────────────────────────
 function log(msg, cls='') {
   const el = document.getElementById('log');
-  const d  = document.createElement('div');
+  const d = document.createElement('div');
   if (cls) d.className = cls;
-  d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + '  ' + msg;
+  d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + ' ' + msg;
   el.appendChild(d);
   el.scrollTop = el.scrollHeight;
   while (el.children.length > 60) el.removeChild(el.firstChild);
 }
 
-// ── Badge ─────────────────────────────────────────────────────
 function setBadge(state, text) {
   const b = document.getElementById('conn-badge');
   const d = b.querySelector('.dot');
@@ -383,12 +358,134 @@ function setBadge(state, text) {
   document.getElementById('badge-text').textContent = text;
 }
 
-// ── Network scan ──────────────────────────────────────────────
-// Strategy: probe the most common home subnet ranges .1 – .254
-// on port 80 hitting /status. We check for {"device":"ESP32-PrintBridge"}
-// to confirm it's our board, then show name + IP.
+function fetchWithTimeout(url, ms, externalSignal) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  const onAbort = () => ctrl.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) ctrl.abort();
+    else externalSignal.addEventListener('abort', onAbort, { once: true });
+  }
+  return fetch(url, { signal: ctrl.signal, mode: 'cors' })
+    .finally(() => {
+      clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener('abort', onAbort);
+    });
+}
 
-let scanAbort = null;
+async function detectLocalSubnet() {
+  if (!window.RTCPeerConnection) return null;
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (subnet) => {
+      if (done) return;
+      done = true;
+      try { pc.close(); } catch {}
+      resolve(subnet);
+    };
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel('x');
+    pc.onicecandidate = (e) => {
+      if (!e.candidate || !e.candidate.candidate) return;
+      const m = e.candidate.candidate.match(/\b((?:192|10|172)\.\d+\.\d+\.\d+)\b/);
+      if (!m) return;
+      const ip = m[1];
+      if (ip.startsWith('127.') || ip.startsWith('0.')) return;
+      const parts = ip.split('.');
+      finish(`${parts[0]}.${parts[1]}.${parts[2]}`);
+    };
+    pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => finish(null));
+    setTimeout(() => finish(null), 2500);
+  });
+}
+
+function buildSubnetList(detected) {
+  const defaults = [
+    '192.168.1', '192.168.0', '192.168.2', '192.168.4', '192.168.10',
+    '10.0.0', '10.0.1', '172.16.0', '172.16.1'
+  ];
+  const out = [];
+  if (detected) out.push(detected);
+  for (const s of defaults) {
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
+function deviceLabel(info) {
+  if (info.board) return info.board;
+  if (info.name) return info.name;
+  if (info.hostname) return info.hostname;
+  if (info.device) return info.device;
+  return 'ESP32';
+}
+
+function isEsp32Device(j) {
+  if (!j || typeof j !== 'object') return false;
+  const blob = JSON.stringify(j).toLowerCase();
+  if (/esp32|nodemcu|node-mcu|32-32e|wroom|wrover|esp-32/.test(blob)) return true;
+  if (j.device === 'ESP32-PrintBridge') return true;
+  if (j.printer !== undefined && j.ip !== undefined) return true;
+  return false;
+}
+
+async function probeUrl(url, signal) {
+  try {
+    const r = await fetchWithTimeout(url, 900, signal);
+    if (!r.ok) return null;
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (!ct.includes('json') && !ct.includes('text')) return null;
+    const j = await r.json();
+    return isEsp32Device(j) ? j : null;
+  } catch {}
+  return null;
+}
+
+async function probeStatus(ipOrHost, signal) {
+  const bases = [`http://${ipOrHost}`];
+  const paths = ['/status', '/api/status', '/info'];
+  for (const base of bases) {
+    for (const path of paths) {
+      const j = await probeUrl(base + path, signal);
+      if (j) return j;
+    }
+  }
+  return null;
+}
+
+function deviceKey(info, ip) {
+  return (info.mac || ip) + '|' + deviceLabel(info);
+}
+
+function deviceSubline(info) {
+  const parts = [];
+  if (info.device && info.device !== info.board) parts.push(info.device);
+  if (info.printerName) parts.push('printer: ' + info.printerName);
+  if (info.printer) parts.push(info.printer);
+  if (info.firmware) parts.push('fw ' + info.firmware);
+  return parts.length ? parts.join(' · ') : 'ESP32 on local network';
+}
+
+function addDeviceToList(info, ip) {
+  const key = deviceKey(info, ip);
+  if (foundIds.has(key)) return;
+  foundIds.add(key);
+
+  const item = document.createElement('div');
+  item.className = 'device-item';
+  const label = deviceLabel(info);
+  item.innerHTML = `
+    <div>
+      <div class="dev-main">${label}</div>
+      <div class="dev-sub">${deviceSubline(info)}</div>
+    </div>
+    <div class="dev-right">
+      <div class="dev-ip">${ip}</div>
+      <div class="dev-rssi">${info.rssi != null ? 'WiFi ' + info.rssi + ' dBm' : ''}</div>
+    </div>`;
+  item.addEventListener('click', () => connectTo(ip, item));
+  document.getElementById('device-list').appendChild(item);
+}
 
 async function startScan() {
   if (scanAbort) scanAbort.abort();
@@ -397,39 +494,50 @@ async function startScan() {
 
   const list = document.getElementById('device-list');
   list.innerHTML = '';
+  foundIds.clear();
   document.getElementById('scan-note').textContent = 'Scanning…';
   setBadge('scanning', 'Scanning');
-  log('Scanning network for ESP32 devices…', 'info');
+  log('Scanning for ESP32 devices (NodeMCU, PrintBridge, etc.)…', 'info');
 
-  // Determine likely subnet from current page URL or default to 192.168.1
-  // We'll try 192.168.0.x, 192.168.1.x, 192.168.2.x, 10.0.0.x
-  const subnets = ['192.168.0', '192.168.1', '192.168.2', '10.0.0', '10.0.1'];
-  const found   = [];
-  let   probed  = 0;
-  let   total   = subnets.length * 254;
+  const found = [];
+  let probed = 0;
+
+  // Try mDNS names first (works on some networks without IP scan)
+  const mdnsHosts = ['esp32-printbridge.local', 'esp32-printbridge'];
+  for (const host of mdnsHosts) {
+    if (signal.aborted) break;
+    const j = await probeStatus(host, signal);
+    if (j) {
+      addDeviceToList(j, j.ip || host);
+      found.push(j.ip || host);
+      log(`Found: ${deviceLabel(j)} at ${j.ip || host} (printer: ${j.printer})`, 'ok');
+    }
+  }
+
+  const detected = await detectLocalSubnet();
+  if (detected) log('Detected subnet ' + detected + '.x', 'info');
+
+  const subnets = buildSubnetList(detected);
+  const total = subnets.length * 254;
 
   const probe = async (ip) => {
     if (signal.aborted) return;
-    try {
-      const r = await fetch(`http://${ip}/status`, {
-        signal: AbortSignal.any
-          ? AbortSignal.any([signal, AbortSignal.timeout(800)])
-          : signal,
-      });
-      if (!r.ok) return;
-      const j = await r.json();
-      if (j.device === 'ESP32-PrintBridge') {
-        addDeviceToList(j, ip);
-        found.push(ip);
-        log(`Found: ${j.board} at ${ip} (printer: ${j.printer})`, 'ok');
+    const j = await probeStatus(ip, signal);
+    if (j) {
+      const useIp = j.ip || ip;
+      if (!found.includes(useIp)) {
+        addDeviceToList(j, useIp);
+        found.push(useIp);
+        log(`Found: ${deviceLabel(j)} at ${useIp} (printer: ${j.printer})`, 'ok');
       }
-    } catch { /* unreachable host */ }
+    }
     probed++;
-    document.getElementById('scan-note').textContent =
-      `Probed ${probed}/${total}${found.length ? ' · ' + found.length + ' found' : ''}`;
+    if (!signal.aborted) {
+      document.getElementById('scan-note').textContent =
+        `Probed ${probed}/${total}${found.length ? ' · ' + found.length + ' found' : ''}`;
+    }
   };
 
-  // Fan out — 30 concurrent probes at a time
   for (const subnet of subnets) {
     if (signal.aborted) break;
     const ips = Array.from({length:254}, (_,i) => `${subnet}.${i+1}`);
@@ -447,44 +555,28 @@ async function startScan() {
     if (!connected) setBadge('', 'Not connected');
     log(note, found.length ? 'ok' : 'err');
     if (!found.length && !list.children.length) {
-      list.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);padding:8px 0">No devices found. Enter IP manually below.</div>';
+      list.innerHTML = '<div style="font-size:0.82rem;color:var(--muted)">No devices found. Check Serial Monitor (115200) for the ESP32 IP.</div>';
     }
   }
 }
 
-function addDeviceToList(info, ip) {
-  const item = document.createElement('div');
-  item.className = 'device-item';
-  item.innerHTML = `
-    <div>
-      <div class="dev-main">${info.board || 'ESP32'}</div>
-      <div class="dev-sub">printer: ${info.printerName || '?'} · ${info.printer}</div>
-    </div>
-    <div class="dev-right">
-      <div class="dev-ip">${ip}</div>
-      <div class="dev-rssi">WiFi ${info.rssi} dBm</div>
-    </div>`;
-  item.addEventListener('click', () => connectTo(ip, item));
-  document.getElementById('device-list').appendChild(item);
-}
-
-// ── Connect ───────────────────────────────────────────────────
 async function connectTo(ip, itemEl) {
   document.querySelectorAll('.device-item').forEach(e => e.classList.remove('selected'));
   if (itemEl) itemEl.classList.add('selected');
-  espURL = 'http://' + ip;
+  espURL = ip.startsWith('http') ? ip.replace(/\/$/, '') : 'http://' + ip;
   setBadge('scanning', 'Connecting…');
   try {
-    const r = await fetch(espURL + '/status', { signal: AbortSignal.timeout(4000) });
+    const r = await fetchWithTimeout(espURL + '/status', 4000);
     const j = await r.json();
     connected = true;
-    setBadge('ok', `${j.board} · printer ${j.printer}`);
-    log(`Connected to ${j.board} at ${ip}`, 'ok');
+    setBadge('ok', `${deviceLabel(j)} · printer ${j.printer}`);
+    log(`Connected to ${deviceLabel(j)} at ${j.ip || ip}`, 'ok');
     document.getElementById('upload-section').style.display = 'block';
     startPolling();
     if (j.printer === 'disconnected') log('Printer BLE not connected yet — check it is on', 'info');
-    localStorage.setItem('esp32ip', ip);
+    localStorage.setItem('esp32ip', j.ip || ip);
   } catch(e) {
+    connected = false;
     setBadge('err', 'Connection failed');
     log('Connect failed: ' + e.message, 'err');
   }
@@ -500,19 +592,18 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r = await fetch(espURL+'/status',{signal:AbortSignal.timeout(3000)});
+      const r = await fetchWithTimeout(espURL+'/status', 3000);
       const j = await r.json();
-      setBadge('ok', `${j.board} · printer ${j.printer}`);
+      setBadge('ok', `${deviceLabel(j)} · printer ${j.printer}`);
     } catch { setBadge('err', 'ESP32 unreachable'); }
   }, 6000);
 }
 
-// ── File input ────────────────────────────────────────────────
 const fileInput = document.getElementById('file-input');
-const dropzone  = document.getElementById('dropzone');
+const dropzone = document.getElementById('dropzone');
 
 fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
-dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('over'); });
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
 dropzone.addEventListener('drop', e => {
   e.preventDefault(); dropzone.classList.remove('over');
@@ -571,31 +662,29 @@ function updatePrintBtn() {
   document.getElementById('print-btn').disabled = !any || !connected;
 }
 
-// ── Darkness slider ───────────────────────────────────────────
 document.getElementById('darkness').addEventListener('input', e => {
   document.getElementById('darkness-val').textContent = e.target.value;
 });
 
-// ── 1bpp conversion (Floyd-Steinberg) ─────────────────────────
 function to1bpp(canvas) {
   const ctx = canvas.getContext('2d');
-  const id  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d   = id.data, w = canvas.width, h = canvas.height;
-  const g   = new Float32Array(w * h);
+  const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = id.data, w = canvas.width, h = canvas.height;
+  const g = new Float32Array(w * h);
   for (let i = 0; i < w*h; i++) g[i] = d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114;
   const out = new Uint8Array(Math.ceil(w/8) * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const idx  = y*w+x;
-      const old  = g[idx];
-      const nv   = old < 128 ? 0 : 255;
-      const err  = old - nv;
+      const idx = y*w+x;
+      const old = g[idx];
+      const nv = old < 128 ? 0 : 255;
+      const err = old - nv;
       g[idx] = nv;
-      if (x+1 < w)           g[idx+1]   += err*7/16;
+      if (x+1 < w) g[idx+1] += err*7/16;
       if (y+1 < h) {
-        if (x>0)             g[idx+w-1] += err*3/16;
-                             g[idx+w]   += err*5/16;
-        if (x+1 < w)        g[idx+w+1] += err*1/16;
+        if (x>0) g[idx+w-1] += err*3/16;
+        g[idx+w] += err*5/16;
+        if (x+1 < w) g[idx+w+1] += err*1/16;
       }
       const bi = y*(w/8) + Math.floor(x/8);
       if (nv === 0) out[bi] |= (1 << (7 - x%8));
@@ -604,15 +693,14 @@ function to1bpp(canvas) {
   return { bytes: out, lines: h };
 }
 
-// ── Print ─────────────────────────────────────────────────────
 async function printSelected() {
   if (!connected) return;
   const btn = document.getElementById('print-btn');
   btn.disabled = true;
   btn.textContent = 'Printing…';
   const darkness = parseInt(document.getElementById('darkness').value);
-  const grid     = document.getElementById('page-grid');
-  const sel      = pages.filter((_,i) => grid.children[i]?.classList.contains('sel'));
+  const grid = document.getElementById('page-grid');
+  const sel = pages.filter((_,i) => grid.children[i]?.classList.contains('sel'));
   log(`Sending ${sel.length} page(s), darkness ${darkness}`, 'info');
 
   for (let i = 0; i < sel.length; i++) {
@@ -620,12 +708,16 @@ async function printSelected() {
     const { bytes, lines } = to1bpp(sel[i].canvas);
     try {
       log(`Sending page ${i+1} — ${lines} lines, ${bytes.length} bytes`);
+      const postCtrl = new AbortController();
+      const postTimer = setTimeout(() => postCtrl.abort(), 60000);
       const r = await fetch(espURL + '/print', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ lines, darkness, data: Array.from(bytes) }),
-        signal: AbortSignal.timeout(60000)
+        signal: postCtrl.signal,
+        mode: 'cors'
       });
+      clearTimeout(postTimer);
       const j = await r.json();
       j.status === 'printed'
         ? log(`Page ${i+1} printed ✓`, 'ok')
@@ -640,7 +732,6 @@ async function printSelected() {
   updatePrintBtn();
 }
 
-// ── Restore last IP ───────────────────────────────────────────
 const saved = localStorage.getItem('esp32ip');
 if (saved) {
   document.getElementById('manual-ip').value = saved;

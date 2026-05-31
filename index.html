@@ -2,99 +2,188 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cat Printer Protocol Diagnostic Tool</title>
+    <title>MXW01 Dynamic Channel Controller</title>
     <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; text-align: center; background: #f5f6fa; }
-        button { width: 100%; padding: 14px; margin: 8px 0; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; }
-        #connectBtn { background: #2f3640; }
-        .test-btn { background: #00a8ff; }
-        .test-btn:disabled { background: #cbcbcb; cursor: not-allowed; }
-        #log { margin-top: 20px; text-align: left; background: #222; color: #00ff00; padding: 15px; font-family: monospace; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+        body { font-family: system-ui, sans-serif; max-width: 480px; margin: 30px auto; padding: 20px; text-align: center; background-color: #f5f6fa; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        textarea { width: 100%; box-sizing: border-box; height: 80px; padding: 10px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 16px; resize: vertical; margin-bottom: 10px; }
+        button { border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer; width: 100%; margin: 6px 0; }
+        #connectBtn { background-color: #2f3640; color: white; }
+        #printBtn { background-color: #20bf6b; color: white; }
+        button:disabled { background-color: #dcdde1 !important; color: #a5b1c2; cursor: not-allowed; }
+        #status { font-size: 13px; color: #2f3640; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #dcdde1; text-align: left; font-family: monospace; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <h2>🐱 Cat Printer Protocol Scanner</h2>
-    <p>Connect your printer, then click through the tests sequentially until the paper feeds.</p>
+    <h2>🐱 MXW01 Channel Mapping Controller</h2>
+    
+    <div class="card">
+        <button id="connectBtn" style="width:100%;">1. Connect & Map Channels</button>
+    </div>
 
-    <button id="connectBtn">1. Search & Connect Printer</button>
-    <button class="test-btn" id="btnV1" disabled>Test Variant 1 (0x02 wrapped payload)</button>
-    <button class="test-btn" id="btnV2" disabled>Test Variant 2 (Raw ESC/POS sequence)</button>
-    <button class="test-btn" id="btnV3" disabled>Test Variant 3 (0x51 0x78 Legacy wrapper)</button>
-    <button class="test-btn" id="btnV4" disabled>Test Variant 4 (Simplified 0xA1 parameter)</button>
+    <div class="card">
+        <textarea id="textInput" placeholder="Type text to print here..."></textarea>
+        <button id="printBtn" style="width:100%;" disabled>2. Print Text Message</button>
+    </div>
 
-    <div id="log">System: Ready. Awaiting connection...</div>
+    <div id="status">Status: Awaiting Bluetooth Pairing...</div>
+    <canvas id="renderCanvas" width="384" height="100" style="display:none;"></canvas>
 
     <script>
-        // Global UUID parameters for Shenzhen Yiduoshudianzikeji modules
-        const SERVICE_UUID = '0000ae30-0000-1000-8000-00805f9b34fb';
-        const CHAR_UUID    = '0000ae01-0000-1000-8000-00805f9b34fb';
+        // List of alternate GATT addresses used across Shenzhen hardware variations
+        const SERVICE_UUIDS = [
+            '0000ae30-0000-1000-8000-00805f9b34fb',
+            '0000ae01-0000-1000-8000-00805f9b34fb',
+            '0000ff00-0000-1000-8000-00805f9b34fb',
+            '000018f0-0000-1000-8000-00805f9b34fb'
+        ];
 
-        let charWrite = null;
-        const logDiv = document.getElementById('log');
+        let activeCharacteristic = null;
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const printBtn = document.getElementById('printBtn');
+        const textInput = document.getElementById('textInput');
+        const canvas = document.getElementById('renderCanvas');
+        const ctx = canvas.getContext('2d');
 
-        function printLog(msg) {
-            logDiv.innerHTML += "<br>> " + msg;
-            logDiv.scrollTop = logDiv.scrollHeight;
+        function log(msg) {
+            statusDiv.innerText += "\n> " + msg;
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+            console.log(msg);
         }
 
-        // Connect Handshake
-        document.getElementById('connectBtn').addEventListener('click', async () => {
-            printLog("Opening Bluetooth device filter window...");
+        function makeMXWPacket(cmdId, payloadArray) {
+            const len = payloadArray.length;
+            const buffer = new Uint8Array(6 + len);
+            buffer[0] = 0x51; 
+            buffer[1] = cmdId; 
+            buffer[2] = 0x00; 
+            buffer[3] = 0x00; 
+            buffer[4] = len & 0xFF; 
+            buffer[5] = (len >> 8) & 0xFF; 
+            if (len > 0) buffer.set(new Uint8Array(payloadArray), 6);
+            return buffer;
+        }
+
+        connectBtn.addEventListener('click', async () => {
+            log("Querying nearby Bluetooth broadcasts...");
             try {
                 const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID]
+                    filters: [{ namePrefix: 'MXW' }, { namePrefix: 'GB' }, { name: 'MXW01' }],
+                    optionalServices: SERVICE_UUIDS
                 });
                 
-                printLog(`Device selected: ${device.name}. Handshaking...`);
+                log(`Connecting to: ${device.name}...`);
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                charWrite = await service.getCharacteristic(CHAR_UUID);
                 
-                printLog("Connection established! Tests unlocked.");
-                document.querySelectorAll('.test-btn').forEach(b => b.disabled = false);
+                log("Scanning for open service tunnels...");
+                let characteristicFound = false;
+
+                // Loop through known service registers to match the correct one
+                for (const serviceUuid of SERVICE_UUIDS) {
+                    try {
+                        const service = await server.getPrimaryService(serviceUuid);
+                        const characteristics = await service.getCharacteristics();
+                        
+                        for (const char of characteristics) {
+                            // Look for a pipeline that accepts direct writes without requiring responses
+                            if (char.properties.writeWithoutResponse || char.properties.write) {
+                                activeCharacteristic = char;
+                                log(`Matched working endpoint! Service: ${serviceUuid.substring(4,8)}, Char: ${char.uuid.substring(4,8)}`);
+                                characteristicFound = true;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        // Skip unmapped slots quietly
+                    }
+                    if (characteristicFound) break;
+                }
+
+                if (!activeCharacteristic) {
+                    throw new Error("No open write channels found on this printer module.");
+                }
+
+                log("Printer communication channel configured!");
+                connectBtn.disabled = true;
+                printBtn.disabled = false;
             } catch (err) {
-                printLog(`ERROR: ${err.message}`);
+                log(`Handshake Rejected: ${err.message}`);
             }
         });
 
-        async function sendBytes(byteArray) {
-            if (!charWrite) return;
+        printBtn.addEventListener('click', async () => {
+            if (!activeCharacteristic) return;
+            const text = textInput.value.trim();
+            if (!text) { alert("Please type text first."); return; }
+
+            printBtn.disabled = true;
+            log("Converting font to matrix grid...");
+
+            ctx.font = "bold 24px Arial, sans-serif";
+            ctx.textBaseline = "top";
+            
+            const lines = text.split('\n');
+            const lineHeight = 32;
+            let targetHeight = lines.length * lineHeight + 20;
+            
+            while (targetHeight % 4 !== 0) targetHeight++;
+            
+            canvas.height = targetHeight;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, 384, canvas.height);
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 24px Arial, sans-serif";
+            ctx.textBaseline = "top";
+            
+            lines.forEach((line, index) => {
+                ctx.fillText(line, 8, index * lineHeight + 10);
+            });
+
+            const imgData = ctx.getImageData(0, 0, 384, canvas.height);
+            const pixels = imgData.data;
+            const totalRows = canvas.height;
+
             try {
-                await charWrite.writeValueWithoutResponse(new Uint8Array(byteArray));
-            } catch(e) {
-                printLog(`Write fail: ${e.message}`);
+                log(`Streaming ${totalRows} lines to matched pipe...`);
+                
+                // Initialize printing session sequence registers
+                await activeCharacteristic.writeValueWithoutResponse(makeMXWPacket(0xAF, [0x5D, 0x00])); 
+                await new Promise(r => setTimeout(r, 60));
+                await activeCharacteristic.writeValueWithoutResponse(makeMXWPacket(0xA2, [0x01, 0x00, 0x00, 0x00])); 
+                await new Promise(r => setTimeout(r, 60));
+                
+                for (let y = 0; y < totalRows; y++) {
+                    const rowBytes = new Uint8Array(48);
+                    for (let x = 0; x < 384; x++) {
+                        const pixelIndex = (y * 384 + x) * 4;
+                        if (pixels[pixelIndex] < 128) { 
+                            const byteIdx = Math.floor(x / 8);
+                            const bitIdx = 7 - (x % 8);
+                            rowBytes[byteIdx] |= (1 << bitIdx);
+                        }
+                    }
+                    
+                    await activeCharacteristic.writeValueWithoutResponse(makeMXWPacket(0xA0, Array.from(rowBytes)));
+                    await new Promise(r => setTimeout(r, 45)); 
+                }
+
+                // Append terminal margin spacer rows
+                const blankLine = new Array(48).fill(0x00);
+                for (let i = 0; i < 30; i++) {
+                    await activeCharacteristic.writeValueWithoutResponse(makeMXWPacket(0xA0, blankLine));
+                    await new Promise(r => setTimeout(r, 30));
+                }
+
+                await activeCharacteristic.writeValueWithoutResponse(makeMXWPacket(0xA3, [0x01, 0x00, 0x00, 0x00]));
+                log("Data stream completed!");
+
+            } catch (err) {
+                log(`Data transfer dropped: ${err.message}`);
+            } finally {
+                printBtn.disabled = false;
             }
-        }
-
-        // VARIANT 1: Corrected Checksum Wrapped Framework [0x02, CMD, LEN, PAYLOAD, CRC, 0x03]
-        document.getElementById('btnV1').addEventListener('click', async () => {
-            printLog("Sending Variant 1 (0x02 wrapper verification)...");
-            // Corrected array manipulation tracking (Payload: 0x32, 0x00 -> CRC = 0x5C)
-            const packet = [0x02, 0xA1, 0x02, 0x32, 0x00, 0x5C, 0x03];
-            await sendBytes(packet);
-        });
-
-        // VARIANT 2: Direct Low-level ESC/POS Motor drive bypass
-        document.getElementById('btnV2').addEventListener('click', async () => {
-            printLog("Sending Variant 2 (Raw ESC/POS stream)...");
-            const packet = [0x1B, 0x4A, 0x40]; // ESC J 64: Advance feeding steps
-            await sendBytes(packet);
-        });
-
-        // VARIANT 3: The 0x51 0x78 Chinese Clone Hardware framing protocol
-        document.getElementById('btnV3').addEventListener('click', async () => {
-            printLog("Sending Variant 3 (0x51 0x78 protocol)...");
-            const packet = [0x51, 0x78, 0xA1, 0x00, 0x01, 0x00, 0x20, 0xFF]; 
-            await sendBytes(packet);
-        });
-
-        // VARIANT 4: Naked Header Parameter Drive
-        document.getElementById('btnV4').addEventListener('click', async () => {
-            printLog("Sending Variant 4 (Simplified Command array)...");
-            const packet = [0xA1, 0x00, 0x00, 0x00, 0x40]; 
-            await sendBytes(packet);
         });
     </script>
 </body>

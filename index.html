@@ -1,516 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖨 Direct Bluetooth Printer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <title>Cat Printer Protocol Diagnostic Tool</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
-
-        :root {
-            --bg: #f5f4f0;
-            --surface: #ffffff;
-            --border: #dddbd5;
-            --ink: #1a1917;
-            --muted: #888580;
-            --accent: #1a1917;
-            --green: #2d7a4f;
-            --red: #b93030;
-            --yellow: #c97b00;
-            --paper: #faf9f6;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background: var(--bg);
-            color: var(--ink);
-            font-family: 'IBM Plex Sans', sans-serif;
-            min-height: 100vh;
-            padding: 32px 16px 64px;
-        }
-
-        .wrap { max-width: 600px; margin: 0 auto; }
-
-        /* ── Header ── */
-        .hdr {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid var(--ink);
-        }
-        .hdr-title {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1.4rem;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-        .hdr-sub {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--muted);
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        /* ── Connection Badge ── */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 99px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--muted);
-        }
-        .badge.ok    { border-color: var(--green); color: var(--green); }
-        .badge.err   { border-color: var(--red);   color: var(--red);   }
-        .badge.connecting { border-color: var(--yellow); color: var(--yellow); }
-        .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-        .dot.pulse { animation: blink 1s infinite; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-        /* ── Section ── */
-        .section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 24px;
-            margin-bottom: 16px;
-        }
-        .section-label {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.65rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 16px;
-        }
-
-        /* ── Buttons ── */
-        button {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 1px solid var(--ink);
-            background: var(--ink);
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.15s;
-            letter-spacing: 0.02em;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        button:hover   { opacity: 0.8; transform: translateY(-1px); }
-        button:active  { transform: translateY(0); opacity: 0.7; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
-        button.danger { border-color: var(--red); background: var(--red); }
-
-        /* ── Dropzone ── */
-        .dropzone {
-            border: 2px dashed var(--border);
-            border-radius: 10px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s;
-            background: var(--paper);
-        }
-        .dropzone:hover, .dropzone.over { border-color: var(--ink); background: #fff; }
-        .dropzone input {
-            position: absolute; inset: 0; opacity: 0; cursor: pointer;
-            width: 100%; height: 100%;
-        }
-        .dropzone-icon { font-size: 2rem; margin-bottom: 10px; }
-        .dropzone p { font-size: 0.85rem; color: var(--muted); }
-        .dropzone strong { color: var(--ink); }
-
-        /* ── Page Grid ── */
-        .page-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 10px;
-            margin-top: 16px;
-        }
-        .page-thumb {
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            transition: border-color 0.15s;
-            background: #fff;
-        }
-        .page-thumb canvas { display: block; width: 100%; }
-        .page-thumb .pnum {
-            position: absolute; bottom: 4px; right: 5px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.6rem; color: var(--muted);
-            background: rgba(255,255,255,0.85);
-            padding: 2px 5px; border-radius: 4px;
-        }
-        .page-thumb.sel  { border-color: var(--ink); }
-        .page-thumb.sel::after {
-            content: '✓';
-            position: absolute; top: 5px; right: 5px;
-            font-size: 0.7rem; font-weight: bold;
-            background: var(--ink); color: #fff;
-            width: 18px; height: 18px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        /* ── Controls ── */
-        .slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-        input[type="range"] { flex: 1; accent-color: var(--ink); cursor: pointer; }
-        .slider-labels { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .slider-labels span {
-            font-size: 0.65rem; color: var(--muted);
-            font-family: 'IBM Plex Mono', monospace;
-            text-transform: uppercase;
-        }
-
-        #print-btn {
-            width: 100%; padding: 16px;
-            font-size: 1rem; border-radius: 10px;
-            letter-spacing: 0.05em;
-        }
-
-        /* ── Log ── */
-        #log {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.75rem; line-height: 1.8;
-            color: var(--muted);
-            max-height: 200px; overflow-y: auto;
-            padding: 4px 0;
-        }
-        #log .ok   { color: var(--green); font-weight: 500; }
-        #log .err  { color: var(--red);   font-weight: 500; }
-        #log .info { color: var(--yellow); }
-
-        .center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; gap: 12px; }
+        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; text-align: center; background: #f5f6fa; }
+        button { width: 100%; padding: 14px; margin: 8px 0; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; }
+        #connectBtn { background: #2f3640; }
+        .test-btn { background: #00a8ff; }
+        .test-btn:disabled { background: #cbcbcb; cursor: not-allowed; }
+        #log { margin-top: 20px; text-align: left; background: #222; color: #00ff00; padding: 15px; font-family: monospace; border-radius: 4px; max-height: 200px; overflow-y: auto; }
     </style>
 </head>
-
 <body>
-<div class="wrap">
 
-    <!-- Header -->
-    <div class="hdr">
-        <div>
-            <div class="hdr-title">🖨 Printer</div>
-            <div class="hdr-sub">Direct Bluetooth Only</div>
-        </div>
-        <div class="badge" id="conn-badge">
-            <span class="dot"></span>
-            <span id="badge-text">Not connected</span>
-        </div>
-    </div>
+    <h2>🐱 Cat Printer Protocol Scanner</h2>
+    <p>Connect your printer, then click through the tests sequentially until the paper feeds.</p>
 
-    <!-- Step 1: Connect -->
-    <div class="section" id="step-connect">
-        <div class="section-label">01 — Connection</div>
-        <div class="center">
-            <p id="conn-hint" style="font-size:0.85rem;color:var(--muted);text-align:center">
-                Turn on your printer and click below to pair.
-            </p>
-            <button id="btn-connect" onclick="connect()">
-                <span>🔗</span> Connect Printer
-            </button>
-            <button id="btn-disconnect" class="danger" onclick="disconnect()" style="display:none">
-                <span>✕</span> Disconnect
-            </button>
-        </div>
-    </div>
+    <button id="connectBtn">1. Search & Connect Printer</button>
+    <button class="test-btn" id="btnV1" disabled>Test Variant 1 (0x02 wrapped payload)</button>
+    <button class="test-btn" id="btnV2" disabled>Test Variant 2 (Raw ESC/POS sequence)</button>
+    <button class="test-btn" id="btnV3" disabled>Test Variant 3 (0x51 0x78 Legacy wrapper)</button>
+    <button class="test-btn" id="btnV4" disabled>Test Variant 4 (Simplified 0xA1 parameter)</button>
 
-    <!-- Step 2: Upload -->
-    <div class="section" id="step-upload" style="display:none">
-        <div class="section-label">02 — File</div>
-        <div class="dropzone" id="dropzone">
-            <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,image/*,application/pdf">
-            <div class="dropzone-icon">📄</div>
-            <p>Drop <strong>PDF, PNG or JPG</strong> here</p>
-        </div>
-    </div>
+    <div id="log">System: Ready. Awaiting connection...</div>
 
-    <!-- Step 3: Print -->
-    <div class="section" id="step-print" style="display:none">
-        <div class="section-label">03 — Print Settings</div>
-        <div class="page-grid" id="page-grid"></div>
-        
-        <div style="margin-top: 24px;">
-            <div class="slider-row">
-                <span style="font-size:0.75rem;color:var(--muted);width:60px">Darkness</span>
-                <input type="range" id="darkness" min="1" max="100" value="70">
-                <span id="darkness-val" style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;width:30px;text-align:right">70</span>
-            </div>
-            <div class="slider-labels">
-                <span></span>
-                <span>light</span>
-                <span>dark</span>
-                <span></span>
-            </div>
-        </div>
+    <script>
+        // Global UUID parameters for Shenzhen Yiduoshudianzikeji modules
+        const SERVICE_UUID = '0000ae30-0000-1000-8000-00805f9b34fb';
+        const CHAR_UUID    = '0000ae01-0000-1000-8000-00805f9b34fb';
 
-        <button id="print-btn" onclick="printAll()" disabled>
-            <span>🖨</span> Print Selected
-        </button>
-    </div>
+        let charWrite = null;
+        const logDiv = document.getElementById('log');
 
-    <!-- Log -->
-    <div class="section">
-        <div class="section-label">System Log</div>
-        <div id="log"><div>Ready. Use Chrome/Edge/Opera.</div></div>
-    </div>
-
-</div>
-
-<script>
-    // ── Setup ────────────────────────────────────────────────────
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    const SERVICE_UUID = "0000ae30-0000-1000-8000-00805f9b34fb";
-    const WRITE_UUID   = "0000ae01-0000-1000-8000-00805f9b34fb";
-
-    let device         = null;
-    let characteristic = null;
-    let pages          = [];
-
-    // ── UI Helpers ───────────────────────────────────────────────
-    function log(msg, cls = '') {
-        const el = document.getElementById('log');
-        const d  = document.createElement('div');
-        if (cls) d.className = cls;
-        d.textContent = `[${new Date().toLocaleTimeString('en-GB')}] ${msg}`;
-        el.appendChild(d);
-        el.scrollTop = el.scrollHeight;
-    }
-
-    function setStatus(state, text) {
-        const b = document.getElementById('conn-badge');
-        const d = b.querySelector('.dot');
-        b.className = 'badge ' + (state || '');
-        d.className = 'dot' + (state === 'connecting' ? ' pulse' : '');
-        document.getElementById('badge-text').textContent = text;
-    }
-
-    // ── Bluetooth ────────────────────────────────────────────────
-    async function connect() {
-        if (!navigator.bluetooth) {
-            log("Error: Browser does not support Web Bluetooth.", "err");
-            return;
+        function printLog(msg) {
+            logDiv.innerHTML += "<br>> " + msg;
+            logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        try {
-            log("Searching for printer...");
-            device = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'MXW' }, { namePrefix: 'Fun' }],
-                optionalServices: [SERVICE_UUID]
-            });
-
-            setStatus('connecting', 'Connecting...');
-            log(`Connecting to ${device.name}...`);
-
-            const server = await device.gatt.connect();
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            characteristic = await service.getCharacteristic(WRITE_UUID);
-
-            device.addEventListener('gattserverdisconnected', onDisconnected);
-
-            setStatus('ok', 'Connected');
-            log(`Successfully connected to ${device.name}`, 'ok');
-
-            document.getElementById('btn-connect').style.display = 'none';
-            document.getElementById('btn-disconnect').style.display = 'inline-flex';
-            document.getElementById('step-upload').style.display = 'block';
-            document.getElementById('conn-hint').style.display = 'none';
-
-        } catch (err) {
-            log("Connection cancelled or failed: " + err.message, "err");
-            setStatus('err', 'Failed');
-        }
-    }
-
-    function onDisconnected() {
-        log("Disconnected from printer.", "err");
-        setStatus('err', 'Disconnected');
-        document.getElementById('btn-connect').style.display = 'inline-flex';
-        document.getElementById('btn-disconnect').style.display = 'none';
-        document.getElementById('step-upload').style.display = 'none';
-        document.getElementById('step-print').style.display = 'none';
-        document.getElementById('conn-hint').style.display = 'block';
-        device = null;
-        characteristic = null;
-    }
-
-    function disconnect() {
-        if (device && device.gatt.connected) device.gatt.disconnect();
-    }
-
-    // ── Protocol ─────────────────────────────────────────────────
-    async function write(data) {
-        if (!characteristic) return;
-        await characteristic.writeValue(data);
-    }
-
-    async function sendDarkness(level) {
-        const val = Math.floor(Math.max(1, Math.min(100, level)) * 255 / 100);
-        await write(new Uint8Array([0x22, 0x21, 0xA1, 0x00, 0x01, 0x00, val, 0xFF]));
-    }
-
-    async function sendHeader(lines) {
-        await write(new Uint8Array([0x22, 0x21, 0xA9, 0x00, 0x04, 0x00, (lines & 0xFF), (lines >> 8), 0x00, 0xFF, 0xFF]));
-    }
-
-    async function sendRow(rowData) {
-        const pkt = new Uint8Array(55);
-        pkt.set([0x22, 0x21, 0xA2, 0x00, 48, 0x00]);
-        pkt.set(rowData, 6);
-        pkt[54] = 0xFF;
-        await write(pkt);
-    }
-
-    async function sendFooter() {
-        await write(new Uint8Array([0x22, 0x21, 0xF3, 0x99, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF]));
-    }
-
-    // ── Files ────────────────────────────────────────────────────
-    const fileInput = document.getElementById('file-input');
-    const dropzone  = document.getElementById('dropzone');
-
-    fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
-    dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropzone.classList.remove('over');
-        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-    });
-
-    async function handleFile(file) {
-        log(`Loading ${file.name}...`);
-        pages = [];
-        document.getElementById('page-grid').innerHTML = '';
-        document.getElementById('step-print').style.display = 'block';
-        
-        const buf = await file.arrayBuffer();
-        if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-            const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-            log(`PDF loaded: ${pdf.numPages} pages.`);
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const pg = await pdf.getPage(i);
-                const vp = pg.getViewport({ scale: 384 / pg.getViewport({ scale: 1 }).width });
-                const cv = document.createElement('canvas');
-                cv.width = 384; cv.height = Math.round(vp.height);
-                await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-                addThumb(cv, i);
-            }
-        } else {
-            const url = URL.createObjectURL(new Blob([buf]));
-            const img = new Image();
-            await new Promise(res => { img.onload = res; img.src = url; });
-            const cv = document.createElement('canvas');
-            cv.width = 384; cv.height = Math.round(img.height * 384 / img.width);
-            cv.getContext('2d').drawImage(img, 0, 0, 384, cv.height);
-            URL.revokeObjectURL(url);
-            addThumb(cv, 1);
-            log("Image loaded.");
-        }
-        updateBtn();
-    }
-
-    function addThumb(canvas, num) {
-        const t = document.createElement('div');
-        t.className = 'page-thumb sel';
-        t.appendChild(canvas.cloneNode(true));
-        t.innerHTML += `<span class="pnum">Page ${num}</span>`;
-        t.onclick = () => { t.classList.toggle('sel'); updateBtn(); };
-        document.getElementById('page-grid').appendChild(t);
-        pages.push({ canvas });
-    }
-
-    function updateBtn() {
-        const any = [...document.getElementById('page-grid').children].some(e => e.classList.contains('sel'));
-        document.getElementById('print-btn').disabled = !any || !characteristic;
-    }
-
-    document.getElementById('darkness').oninput = e => document.getElementById('darkness-val').textContent = e.target.value;
-
-    // ── Print ────────────────────────────────────────────────────
-    async function printAll() {
-        if (!characteristic) return;
-        const btn = document.getElementById('print-btn');
-        btn.disabled = true;
-        btn.textContent = "Printing...";
-
-        const darkness = parseInt(document.getElementById('darkness').value);
-        const grid = document.getElementById('page-grid');
-        const sel  = pages.filter((_, i) => grid.children[i]?.classList.contains('sel'));
-
-        try {
-            log(`Starting print (${sel.length} pages)...`, 'info');
-            await sendDarkness(darkness);
-
-            for (let i = 0; i < sel.length; i++) {
-                log(`Printing page ${i+1}...`);
-                const { bytes, lines } = processImage(sel[i].canvas);
+        // Connect Handshake
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            printLog("Opening Bluetooth device filter window...");
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
                 
-                await sendHeader(lines);
-                for (let r = 0; r < lines; r++) {
-                    await sendRow(bytes.slice(r * 48, (r + 1) * 48));
-                    if (r % 20 === 0) await new Promise(res => setTimeout(res, 15));
-                }
-                await sendFooter();
-                log(`Page ${i+1} done.`, 'ok');
-                if (i < sel.length - 1) await new Promise(res => setTimeout(res, 1200));
+                printLog(`Device selected: ${device.name}. Handshaking...`);
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                charWrite = await service.getCharacteristic(CHAR_UUID);
+                
+                printLog("Connection established! Tests unlocked.");
+                document.querySelectorAll('.test-btn').forEach(b => b.disabled = false);
+            } catch (err) {
+                printLog(`ERROR: ${err.message}`);
             }
-            log("Print job complete!", "ok");
-        } catch (err) {
-            log("Print failed: " + err.message, "err");
-        }
+        });
 
-        btn.disabled = false;
-        btn.innerHTML = "<span>🖨</span> Print Selected";
-        updateBtn();
-    }
-
-    function processImage(canvas) {
-        const ctx = canvas.getContext('2d');
-        const imgData = ctx.getImageData(0, 0, 384, canvas.height).data;
-        const h = canvas.height;
-        const gray = new Float32Array(384 * h);
-        for (let i = 0; i < 384 * h; i++) gray[i] = imgData[i*4]*0.299 + imgData[i*4+1]*0.587 + imgData[i*4+2]*0.114;
-        
-        const out = new Uint8Array(48 * h);
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < 384; x++) {
-                const i = y * 384 + x;
-                const old = gray[i];
-                const nv  = old < 128 ? 0 : 255;
-                const err = old - nv;
-                gray[i] = nv;
-                if (x+1 < 384) gray[i+1] += err * 7/16;
-                if (y+1 < h) {
-                    if (x > 0) gray[i+383] += err * 3/16;
-                    gray[i+384] += err * 5/16;
-                    if (x+1 < 384) gray[i+385] += err * 1/16;
-                }
-                if (nv === 0) out[y * 48 + Math.floor(x / 8)] |= (1 << (7 - x % 8));
+        async function sendBytes(byteArray) {
+            if (!charWrite) return;
+            try {
+                await charWrite.writeValueWithoutResponse(new Uint8Array(byteArray));
+            } catch(e) {
+                printLog(`Write fail: ${e.message}`);
             }
         }
-        return { bytes: out, lines: h };
-    }
-</script>
+
+        // VARIANT 1: Corrected Checksum Wrapped Framework [0x02, CMD, LEN, PAYLOAD, CRC, 0x03]
+        document.getElementById('btnV1').addEventListener('click', async () => {
+            printLog("Sending Variant 1 (0x02 wrapper verification)...");
+            // Corrected array manipulation tracking (Payload: 0x32, 0x00 -> CRC = 0x5C)
+            const packet = [0x02, 0xA1, 0x02, 0x32, 0x00, 0x5C, 0x03];
+            await sendBytes(packet);
+        });
+
+        // VARIANT 2: Direct Low-level ESC/POS Motor drive bypass
+        document.getElementById('btnV2').addEventListener('click', async () => {
+            printLog("Sending Variant 2 (Raw ESC/POS stream)...");
+            const packet = [0x1B, 0x4A, 0x40]; // ESC J 64: Advance feeding steps
+            await sendBytes(packet);
+        });
+
+        // VARIANT 3: The 0x51 0x78 Chinese Clone Hardware framing protocol
+        document.getElementById('btnV3').addEventListener('click', async () => {
+            printLog("Sending Variant 3 (0x51 0x78 protocol)...");
+            const packet = [0x51, 0x78, 0xA1, 0x00, 0x01, 0x00, 0x20, 0xFF]; 
+            await sendBytes(packet);
+        });
+
+        // VARIANT 4: Naked Header Parameter Drive
+        document.getElementById('btnV4').addEventListener('click', async () => {
+            printLog("Sending Variant 4 (Simplified Command array)...");
+            const packet = [0xA1, 0x00, 0x00, 0x00, 0x40]; 
+            await sendBytes(packet);
+        });
+    </script>
 </body>
 </html>
